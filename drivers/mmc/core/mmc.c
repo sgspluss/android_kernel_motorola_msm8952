@@ -1513,7 +1513,7 @@ static int mmc_select_cmdq(struct mmc_card *card)
 		}
 	}
 	mmc_host_clk_release(card->host);
-	printk_once("%s: CMDQ enabled on card\n", mmc_hostname(host));
+	pr_debug("%s: CMDQ enabled on card\n", mmc_hostname(host));
 out:
 	return ret;
 }
