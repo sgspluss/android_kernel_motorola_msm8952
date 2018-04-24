@@ -2830,7 +2830,7 @@ static ssize_t frame_counter_show(struct device *dev,
 	u32 reg;
 
 	if (!ctl) {
-		pr_warn("there is no ctl attached to fb\n");
+		pr_debug("there is no ctl attached to fb\n");
 		return -ENODEV;
 	}
 
@@ -2897,7 +2897,7 @@ static ssize_t te_enable_store(struct device *dev,
 	}
 
 	if (mdss_fb_is_power_off(mfd)) {
-		pr_warn("panel is not powered\n");
+		pr_debug("panel is not powered\n");
 		r = -EPERM;
 		goto end;
 	}
