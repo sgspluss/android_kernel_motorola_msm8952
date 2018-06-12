@@ -37,6 +37,7 @@ config ARM64
 	select HAVE_ARCH_MMAP_RND_COMPAT_BITS if COMPAT
 	select HAVE_ARCH_SECCOMP_FILTER
 	select HAVE_ARCH_AUDITSYSCALL
+	select HAVE_ARCH_SECCOMP_FILTER
 	select HAVE_ARCH_TRACEHOOK
 	select HAVE_C_RECORDMCOUNT
 	select HAVE_CC_STACKPROTECTOR
@@ -586,6 +587,20 @@ config SECCOMP
 	  defined by each seccomp mode.
 
 
+config SECCOMP
+	bool "Enable seccomp to safely compute untrusted bytecode"
+	---help---
+	  This kernel feature is useful for number crunching applications
+	  that may need to compute untrusted bytecode during their
+	  execution. By using pipes or other transports made available to
+	  the process as file descriptors supporting the read/write
+	  syscalls, it's possible to isolate those applications in
+	  their own address space using seccomp. Once seccomp is
+	  enabled via prctl(PR_SET_SECCOMP), it cannot be disabled
+	  and the task is only allowed to execute a few safe syscalls
+	  defined by each seccomp mode.
+
+
 endmenu
 
 menu "Boot options"
@@ -698,6 +713,24 @@ source "drivers/cpufreq/Kconfig"
 endif
 
 source "drivers/cpuidle/Kconfig"
+
+endmenu
+
+menu "Expermimental Security Enhancements"
+
+config KUSER_HELPERS_SELECTIVE_DISABLE
+	bool "Disable KUSER_HELPERS selectively"
+	depends on ARM64
+	help
+	  Kuser_Helpers is a set of functions in the vector page at a fixed address that
+	  are used to support applications compiled for legacy ARM <7.  These functions
+	  being at a fixed address creates an ASLR bypass.
+
+	  Do not enable this feature unless you know what you are doing, this is
+	  experimental, and will break any application that uses the Kuser_Helpers or
+	  registers a signal handler and uses the kernel trampolines.
+
+	  If unsure, say N.
 
 endmenu
 

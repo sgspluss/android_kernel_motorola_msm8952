@@ -32,6 +32,7 @@ enum {
 	Opt_multiuser,
 	Opt_userid,
 	Opt_reserved_mb,
+	Opt_gid_derivation,
 	Opt_err,
 };
 
@@ -43,6 +44,7 @@ static const match_table_t sdcardfs_tokens = {
 	{Opt_mask, "mask=%u"},
 	{Opt_userid, "userid=%d"},
 	{Opt_multiuser, "multiuser"},
+	{Opt_gid_derivation, "derive_gid"},
 	{Opt_reserved_mb, "reserved_mb=%u"},
 	{Opt_err, NULL}
 };
@@ -64,6 +66,8 @@ static int parse_options(struct super_block *sb, char *options, int silent,
 	vfsopts->gid = 0;
 	/* by default, 0MB is reserved */
 	opts->reserved_mb = 0;
+	/* by default, gid derivation is off */
+	opts->gid_derivation = false;
 
 	*debug = 0;
 
@@ -114,6 +118,9 @@ static int parse_options(struct super_block *sb, char *options, int silent,
 			if (match_int(&args[0], &option))
 				return 0;
 			opts->reserved_mb = option;
+			break;
+		case Opt_gid_derivation:
+			opts->gid_derivation = true;
 			break;
 		/* unknown option */
 		default:
@@ -281,6 +288,13 @@ static int sdcardfs_read_super(struct vfsmount *mnt, struct super_block *sb,
 	atomic_inc(&lower_sb->s_active);
 	sdcardfs_set_lower_super(sb, lower_sb);
 
+	sb->s_stack_depth = lower_sb->s_stack_depth + 1;
+	if (sb->s_stack_depth > FILESYSTEM_MAX_STACK_DEPTH) {
+		pr_err("sdcardfs: maximum fs stacking depth exceeded\n");
+		err = -EINVAL;
+		goto out_sput;
+	}
+
 	/* inherit maxbytes from lower file system */
 	sb->s_maxbytes = lower_sb->s_maxbytes;
 
@@ -327,13 +341,13 @@ static int sdcardfs_read_super(struct vfsmount *mnt, struct super_block *sb,
 	mutex_lock(&sdcardfs_super_list_lock);
 	if (sb_info->options.multiuser) {
 		setup_derived_state(sb->s_root->d_inode, PERM_PRE_ROOT,
-					sb_info->options.fs_user_id, AID_ROOT,
-					false, sb->s_root->d_inode);
+				sb_info->options.fs_user_id, AID_ROOT,
+				false, SDCARDFS_I(sb->s_root->d_inode)->data);
 		snprintf(sb_info->obbpath_s, PATH_MAX, "%s/obb", dev_name);
 	} else {
 		setup_derived_state(sb->s_root->d_inode, PERM_ROOT,
-					sb_info->options.fs_user_id, AID_ROOT,
-					false, sb->s_root->d_inode);
+				sb_info->options.fs_user_id, AID_ROOT,
+				false, SDCARDFS_I(sb->s_root->d_inode)->data);
 		snprintf(sb_info->obbpath_s, PATH_MAX, "%s/Android/obb", dev_name);
 	}
 	fixup_tmp_permissions(sb->s_root->d_inode);
